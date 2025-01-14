@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UML Use Case Diagram</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
+  <style>
+    .control-panel {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="control-panel">
+    <label for="systemBoundary">Add System Boundary:</label>
+    <button onclick="drawSystemBoundary()">Draw Boundary</button>
+    
+    <label for="actors">Add Actor:</label>
+    <select id="actors">
+      <option value="Customer">Customer</option>
+      <option value="Payment Processor">Payment Processor</option>
+    </select>
+    <button onclick="addActor()">Add Actor</button>
+
+    <label for="useCases">Add Use Case:</label>
+    <select id="useCases">
+      <option value="Browse Products">Browse Products</option>
+      <option value="Add to Cart">Add to Cart</option>
+      <option value="Checkout">Checkout</option>
+      <option value="Make Payment">Make Payment</option>
+    </select>
+    <button onclick="addUseCase()">Add Use Case</button>
+    
+    <label for="newUseCase">New Use Case:</label>
+    <input type="text" id="newUseCase" placeholder="Enter new use case name">
+    <button onclick="addNewUseCase()">Add New Use Case</button>
+
+    <label for="relationships">Add Relationship:</label>
+    <select id="relationships">
+      <option value="Association">Association</option>
+      <option value="Include">Include</option>
+      <option value="Extend">Extend</option>
+    </select>
+    <button onclick="addRelationship()">Add Relationship</button>
+  </div>
+
+  <canvas id="umlCanvas" width="800" height="600" style="border:1px solid #000;"></canvas>
+
+  <script>
+    const canvas = new fabric.Canvas('umlCanvas');
+    let actorCount = 0;
+    let useCaseCount = 0;
+    let boundaryDrawn = false;
+
+    // Store references to actors and use cases
+    const actors = [];
+    const useCases = [];
+
+    // Function to draw system boundary
+    function drawSystemBoundary() {
+      if (!boundaryDrawn) {
+        const systemBoundary = new fabric.Rect({
+          left: 150,
+          top: 50,
+          width: 500,
+          height: 400,
+          fill: 'transparent',
+          stroke: 'black',
+          strokeWidth: 2
+        });
+        canvas.add(systemBoundary);
+        boundaryDrawn = true;
+      }
+    }
+
+    // Function to add actor
+    function addActor() {
+      const actorSelect = document.getElementById('actors');
+      const actorName = actorSelect.value;
+      const actorText = new fabric.Text(actorName, {
+        left: 50,
+        top: 50 + (actorCount * 50),
+        fontSize: 18,
+      });
+      actors.push(actorText);
+      canvas.add(actorText);
+      actorCount++;
+    }
+
+    // Function to add use case
+    function addUseCase() {
+      const useCaseSelect = document.getElementById('useCases');
+      const useCaseName = useCaseSelect.value;
+      const useCaseEllipse = new fabric.Ellipse({
+        left: 250,
+        top: 100 + (useCaseCount * 100),
+        rx: 80,
+        ry: 40,
+        fill: 'lightgrey',
+        stroke: 'black',
+        strokeWidth: 1,
+      });
+      const useCaseText = new fabric.Text(useCaseName, {
+        left: 250,
+        top: 100 + (useCaseCount * 100),
+        fontSize: 16,
+        originX: 'center',
+        originY: 'center'
+      });
+      useCases.push({ellipse: useCaseEllipse, text: useCaseText});
+      canvas.add(useCaseEllipse, useCaseText);
+      useCaseCount++;
+    }
+
+    // Function to add new use case name to the dropdown
+    function addNewUseCase() {
+      const newUseCaseInput = document.getElementById('newUseCase');
+      const newUseCaseName = newUseCaseInput.value;
+      if (newUseCaseName.trim() !== "") {
+        const useCaseSelect = document.getElementById('useCases');
+        const newOption = document.createElement('option');
+        newOption.value = newUseCaseName;
+        newOption.text = newUseCaseName;
+        useCaseSelect.appendChild(newOption);
+        newUseCaseInput.value = ""; // Clear the input field
+      }
+    }
+
+    // Function to add relationship
+    function addRelationship() {
+      const relationshipSelect = document.getElementById('relationships');
+      const relationshipType = relationshipSelect.value;
+      
+      // Example of creating a line (association) - can be enhanced to dynamically select actors and use cases
+      if (actors.length > 0 && useCases.length > 0) {
+        const actor = actors[0]; // Select the first actor (can be changed to a more dynamic selection)
+        const useCase = useCases[0].ellipse; // Select the first use case (can be changed to a more dynamic selection)
+        
+        const line = new fabric.Line([actor.left + actor.width, actor.top, useCase.left, useCase.top], {
+          stroke: 'black'
+        });
+
+        if (relationshipType === "Include" || relationshipType === "Extend") {
+          line.set('strokeDashArray', [5, 5]);
+        }
+
+        canvas.add(line);
+      }
+    }
+
+  </script>
+</body>
+</html>
