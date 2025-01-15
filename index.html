@@ -3,6 +3,7 @@
 <head>
   <title>UML Use Case Diagram</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.1/sql-wasm.js"></script>
   <style>
     .control-panel {
       margin-bottom: 20px;
@@ -39,21 +40,52 @@
       <option value="Association">Association</option>
       <option value="Include">Include</option>
       <option value="Extend">Extend</option>
+      <option value="Generalization">Generalization</option>
     </select>
     <button onclick="addRelationship()">Add Relationship</button>
+    
+    <label for="diagramName">Diagram Name:</label>
+    <input type="text" id="diagramName" placeholder="Enter diagram name">
+    <button onclick="saveDiagram()">Save Diagram</button>
+    
+    <label for="savedDiagrams">Load Diagram:</label>
+    <select id="savedDiagrams"></select>
+    <button onclick="loadDiagram()">Load Diagram</button>
   </div>
 
   <canvas id="umlCanvas" width="800" height="600" style="border:1px solid #000;"></canvas>
 
   <script>
+    let db;
     const canvas = new fabric.Canvas('umlCanvas');
     let actorCount = 0;
     let useCaseCount = 0;
     let boundaryDrawn = false;
+    let relationshipCount = 0;
+
+    // Initialize the database when the page loads
+    window.onload = async function() {
+      await initDatabase();
+      loadDiagramNames();
+    };
 
     // Store references to actors and use cases
     const actors = [];
     const useCases = [];
+
+    // Function to initialize the database
+    async function initDatabase() {
+      const SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.1/sql-wasm.wasm` });
+      db = new SQL.Database();
+
+      // Load database from local storage if available
+      const storedDb = localStorage.getItem('umlDiagramsDb');
+      if (storedDb) {
+        db = new SQL.Database(Uint8Array.from(atob(storedDb), c => c.charCodeAt(0)));
+      } else {
+        db.run("CREATE TABLE IF NOT EXISTS diagrams (id INTEGER PRIMARY KEY, name TEXT, json TEXT)");
+      }
+    }
 
     // Function to draw system boundary
     function drawSystemBoundary() {
@@ -129,13 +161,14 @@
     function addRelationship() {
       const relationshipSelect = document.getElementById('relationships');
       const relationshipType = relationshipSelect.value;
-      
-      // Example of creating a line (association) - can be enhanced to dynamically select actors and use cases
+
       if (actors.length > 0 && useCases.length > 0) {
-        const actor = actors[0]; // Select the first actor (can be changed to a more dynamic selection)
-        const useCase = useCases[0].ellipse; // Select the first use case (can be changed to a more dynamic selection)
+        const actor = actors[relationshipCount % actors.length]; // Cycle through actors
+        const useCase = useCases[relationshipCount % useCases.length].ellipse; // Cycle through use cases
         
-        const line = new fabric.Line([actor.left + actor.width, actor.top, useCase.left, useCase.top], {
+        const offset = relationshipCount * 10; // Offset each new line by 10 pixels
+        
+        const line = new fabric.Line([actor.left + actor.width, actor.top + offset, useCase.left, useCase.top + offset], {
           stroke: 'black'
         });
 
@@ -143,10 +176,75 @@
           line.set('strokeDashArray', [5, 5]);
         }
 
+        if (relationshipType === "Generalization") {
+          line.set('stroke', 'black');
+          line.set('strokeWidth', 2);
+          const arrow = new fabric.Triangle({
+            left: useCase.left,
+            top: useCase.top,
+            width: 10,
+            height: 10,
+            fill: 'black',
+            angle: 90
+          });
+          canvas.add(arrow);
+        }
+
         canvas.add(line);
+        relationshipCount++;
       }
     }
 
+    // Function to save the current diagram
+    function saveDiagram() {
+      const diagramName = document.getElementById('diagramName').value;
+      if (diagramName.trim() !== "") {
+        const json = JSON.stringify(canvas.toJSON());
+        const stmt = db.prepare("INSERT INTO diagrams (name, json) VALUES (?, ?)");
+        stmt.run([diagramName, json]);
+        stmt.free();
+
+        // Save the database to local storage
+        const data = db.export();
+        const base64Data = btoa(String.fromCharCode.apply(null, data));
+        localStorage.setItem('umlDiagramsDb', base64Data);
+
+        loadDiagramNames();
+      }
+    }
+
+    // Function to load saved diagram names into the dropdown
+    function loadDiagramNames() {
+      const savedDiagramsSelect = document.getElementById('savedDiagrams');
+      savedDiagramsSelect.innerHTML = ''; // Clear the dropdown
+      const result = db.exec("SELECT id, name FROM diagrams");
+      if (result.length > 0) {
+        const rows = result[0].values;
+        rows.forEach(row => {
+          const option = document.createElement('option');
+          option.value = row[0];
+          option.text = row[1];
+          savedDiagramsSelect.appendChild(option);
+        });
+      }
+    }
+
+    // Function to load a selected diagram
+    function loadDiagram() {
+      const savedDiagramsSelect = document.getElementById('savedDiagrams');
+      const diagramId = savedDiagramsSelect.value;
+      if (diagramId) {
+        const stmt = db.prepare("SELECT json FROM diagrams WHERE id = ?");
+        stmt.bind([diagramId]);
+        while (stmt.step()) {
+          const row = stmt.getAsObject();
+          canvas.loadFromJSON(row.json, () => {
+            canvas.renderAll();
+          });
+        }
+        stmt.free();
+      }
+    }
   </script>
 </body>
 </html>
