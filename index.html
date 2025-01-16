@@ -256,7 +256,7 @@
       box-shadow: 0 2px 5px var(--shadow-color);
       margin: 20px auto;
       max-width: 800px;
-      width: 100%;
+      width: fit-content;
       box-sizing: border-box;
     }
 
@@ -346,6 +346,15 @@
     .show-dropdown {
       display: block;
     }
+
+        /* Title Styling */
+        .title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 20px 0;
+      color: var(--primary-color);
+    }
   </style>
 </head>
 <body>
@@ -364,6 +373,9 @@
       <button onclick="toggleTheme()" title="Toggle Theme"><i class="fas fa-moon"></i></button>
     </div>
   </div>
+
+    <!-- Title -->
+    <div class="title">UML Use Case Diagram Drawer Tool</div>
 
   <!-- Control Panel -->
   <div class="navbar-controls">
